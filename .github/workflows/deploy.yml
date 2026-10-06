@@ -1,4 +1,4 @@
-name: Build & Deploy Gully Cricket Scorer (Web & Android)
+name: Build & Release Gully Cricket Scorer APK
 
 on:
   push:
@@ -7,45 +7,10 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "deploy"
-  cancel-in-progress: true
 
 jobs:
-  build-and-deploy-web:
-    name: Build & Deploy Web App
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Configure Platform Files
-        run: flutter create . --platforms=web --org com.rahulnc.gullycricket
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build Web Application
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
-
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/web
-          branch: gh-pages
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  build-android-apk:
-    name: Build Android Mobile APK
+  build-apk:
+    name: Build Android APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -63,18 +28,35 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Configure Android Platform Files
-        run: flutter create . --platforms=android --org com.rahulnc.gullycricket
-
-      - name: Get Dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Android APK
+      - name: Build Android Release APK
         run: flutter build apk --release
 
-      - name: Upload Android APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GullyCricketScorer-Android-APK
+          name: GullyCricketScorer-v1.0.apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: warn
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.0
+          name: "Gully Cricket Scorer v1.0.0 (Release APK)"
+          body: |
+            🏏 **Gully Cricket Scorer - Android Release**
+            
+            ### Features:
+            - Fast, one-tap live ground scoring
+            - Custom over & extra rules (Wides/No-Balls runs, reball toggle)
+            - Complete ball-by-ball history & undo
+            - Target chase calculator & run rate metrics
+            - Instant WhatsApp match summary sharing
+            
+            👉 **Download the `.apk` file below and install it directly on your Android phone.**
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
